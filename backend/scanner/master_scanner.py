@@ -5,9 +5,10 @@ Orchestrates all individual scanners and generates comprehensive report.
 """
 
 import json
-import os  # Needed for environment variables
+import os
+import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict
 
 from backend.models.database import EBSFinding, EC2Finding, ScanRun, SessionLocal
@@ -21,22 +22,54 @@ class MasterScanner:
     """
     Orchestrates all cost optimization scanners.
 
-    Learning: Design Pattern - Facade Pattern
-    ==========================================
+    Design Pattern - Facade Pattern:
     This class provides a simple interface to complex subsystems.
     """
 
-    # FIX 1: Default region set to eu-west-2 (London)
     def __init__(self, region: str = "eu-west-2", profile_name: str = None):
         self.region = region
         self.profile_name = profile_name
 
-        # Initialize all scanners
-        self.ec2_scanner = EC2Scanner(region, profile_name)
-        self.ebs_scanner = EBSScanner(region, profile_name)
+        # Check for Demo Mode (env var DEMO_MODE=true)
+        self.is_demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
+
+        # Only initialize real scanners if NOT in demo mode
+        if not self.is_demo_mode:
+            self.ec2_scanner = EC2Scanner(region, profile_name)
+            self.ebs_scanner = EBSScanner(region, profile_name)
 
     def scan(self, save_to_db: bool = True) -> Dict:
-        """Run all scanners and generate comprehensive report"""
+        """Run all scanners (or generate demo data) and generate comprehensive report"""
+
+        # ---------------------------------------------------------
+        # DEMO MODE INTERCEPT
+        # ---------------------------------------------------------
+        if self.is_demo_mode:
+            print(f"\n🧪 RUNNING IN DEMO MODE (Fake Data)")
+            print("=" * 70)
+            # Simulate scan time
+            time.sleep(2)
+            results = self._generate_demo_data()
+
+            # Print fake summary for CLI user
+            self._print_summary(results)
+
+            # Save to database (so it appears in frontend)
+            if save_to_db:
+                try:
+                    scan_run_id = self._save_to_database(results)
+                    results["scan_metadata"]["scan_run_id"] = scan_run_id
+                    print(
+                        f"\n✅ Demo results saved to database (scan_run_id: {scan_run_id})"
+                    )
+                except Exception as e:
+                    print(f"\n⚠️  Warning: Could not save demo data to database: {e}")
+
+            return results
+
+        # ---------------------------------------------------------
+        # REAL SCAN LOGIC
+        # ---------------------------------------------------------
         start_time = time.time()
 
         print("\n" + "=" * 70)
@@ -97,25 +130,7 @@ class MasterScanner:
         }
 
         # Print executive summary
-        print("=" * 70)
-        print("📊 EXECUTIVE SUMMARY")
-        print("=" * 70)
-        print(f"Total EC2 Savings:        ${ec2_monthly_savings:>10,.2f}/month")
-        print(f"Total EBS Savings:        ${ebs_monthly_savings:>10,.2f}/month")
-        print("-" * 70)
-        print(f"TOTAL MONTHLY SAVINGS:    ${total_monthly:>10,.2f}")
-        print(f"TOTAL ANNUAL SAVINGS:     ${total_annual:>10,.2f}")
-        print("=" * 70)
-        print(
-            f"Critical Issues:          {report['executive_summary']['critical_items']:>10}"
-        )
-        print(
-            f"High Priority Issues:     {report['executive_summary']['high_priority_items']:>10}"
-        )
-        print(
-            f"Total Recommendations:    {report['executive_summary']['total_recommendations']:>10}"
-        )
-        print("=" * 70)
+        self._print_summary(report)
 
         # Save to database
         if save_to_db and total_monthly > 0:
@@ -132,6 +147,122 @@ class MasterScanner:
             )
 
         return report
+
+    def _print_summary(self, report):
+        """Helper to print the CLI summary"""
+        summary = report["executive_summary"]
+        print("=" * 70)
+        print("📊 EXECUTIVE SUMMARY")
+        print("=" * 70)
+        print(f"TOTAL MONTHLY SAVINGS:    ${summary['total_monthly_savings']:>10,.2f}")
+        print(f"TOTAL ANNUAL SAVINGS:     ${summary['total_annual_savings']:>10,.2f}")
+        print("=" * 70)
+        print(f"Critical Issues:          {summary['critical_items']:>10}")
+        print(f"High Priority Issues:     {summary['high_priority_items']:>10}")
+        print(f"Total Recommendations:    {summary['total_recommendations']:>10}")
+        print("=" * 70)
+
+    def _generate_demo_data(self) -> Dict:
+        """Generates realistic mock data for portfolio/demo purposes"""
+        return {
+            "scan_metadata": {
+                "scan_date": datetime.utcnow().isoformat(),
+                "region": self.region,
+                "scanners_run": ["EC2", "EBS"],
+                "scan_duration_seconds": 3,
+            },
+            "ec2_findings": {
+                "instances_scanned": 15,
+                "recommendations": [
+                    {
+                        "instance_id": "i-demo-web-prod",
+                        "instance_name": "legacy-web-prod",
+                        "instance_type": "m5.large",
+                        "metrics": {
+                            "avg_cpu": 2.5,
+                            "max_cpu": 12.0,
+                            "min_cpu": 0.5,
+                            "datapoints": 1440,
+                        },
+                        "costs": {"current_monthly_cost": 76.00},
+                        "recommendation": {
+                            "action": "Rightsize",
+                            "reason": "Instance is underutilized (Avg CPU < 3%). Downgrade to t3.medium.",
+                            "primary_savings": 42.50,
+                            "annual_impact": 510.00,
+                            "severity": "high",
+                        },
+                        "all_scenarios": {},
+                    },
+                    {
+                        "instance_id": "i-demo-test-worker",
+                        "instance_name": "dev-test-worker",
+                        "instance_type": "t3.xlarge",
+                        "metrics": {
+                            "avg_cpu": 0.1,
+                            "max_cpu": 0.5,
+                            "min_cpu": 0.0,
+                            "datapoints": 1440,
+                        },
+                        "costs": {"current_monthly_cost": 120.00},
+                        "recommendation": {
+                            "action": "Terminate",
+                            "reason": "Idle instance detected. CPU < 1% for 7 days.",
+                            "primary_savings": 120.00,
+                            "annual_impact": 1440.00,
+                            "severity": "critical",
+                        },
+                        "all_scenarios": {},
+                    },
+                ],
+                "summary": {"critical": 1, "high": 1},
+            },
+            "ebs_findings": {
+                "findings": {
+                    "unattached_volumes": {
+                        "items": [
+                            {
+                                "volume_id": "vol-demo-unused",
+                                "name": "old-backup-data",
+                                "type": "gp2",
+                                "size_gb": 500,
+                                "age_days": 45,
+                                "monthly_cost": 50.00,
+                                "annual_cost": 600.00,
+                                "recommendation": "Delete unattached volume (detached 45 days ago)",
+                                "severity": "medium",
+                            }
+                        ]
+                    },
+                    "volume_optimizations": {
+                        "items": [
+                            {
+                                "volume_id": "vol-demo-io1",
+                                "current_type": "io1",
+                                "recommended_type": "gp3",
+                                "size_gb": 1000,
+                                "current_monthly_cost": 225.00,
+                                "monthly_savings": 145.00,
+                                "reason": "Migrate IO1 to GP3 for 4x cost efficiency",
+                                "severity": "high",
+                            }
+                        ]
+                    },
+                },
+                "summary": {
+                    "total_findings": 2,
+                    "critical_severity": 0,
+                    "high_severity": 1,
+                },
+            },
+            "executive_summary": {
+                "total_monthly_savings": 357.50,
+                "total_annual_savings": 4290.00,
+                "total_recommendations": 4,
+                "critical_items": 1,
+                "high_priority_items": 2,
+            },
+        }
 
     def _save_to_database(self, report: Dict) -> int:
         """Save scan results to PostgreSQL"""
@@ -208,7 +339,29 @@ class MasterScanner:
                 )
                 db.add(finding)
 
-            # (Step 3: Optimizations & Snapshots omitted as requested)
+            # 3. Save EBS findings - volume optimizations
+            for opt in (
+                report["ebs_findings"]
+                .get("findings", {})
+                .get("volume_optimizations", {})
+                .get("items", [])
+            ):
+                finding = EBSFinding(
+                    scan_run_id=scan_run.id,
+                    finding_type="type_optimization",
+                    resource_id=opt["volume_id"],
+                    resource_name="Volume Optimization",
+                    volume_type=opt["current_type"],
+                    recommended_type=opt["recommended_type"],
+                    size_gb=opt["size_gb"],
+                    is_attached=True,
+                    monthly_cost=opt["current_monthly_cost"],
+                    potential_monthly_savings=opt["monthly_savings"],
+                    annual_cost=opt["current_monthly_cost"] * 12,
+                    recommendation_text=opt["reason"],
+                    severity=opt["severity"],
+                )
+                db.add(finding)
 
             db.commit()
             return scan_run.id
@@ -235,12 +388,8 @@ if __name__ == "__main__":
         print("Run 'docker-compose up -d postgres' to start database")
         print("Continuing with scan (results won't be saved)...\n")
 
-    # FIX 2: Profile Name Handling
-    # This prevents the crash by falling back to 'default' if 'AWS_PROFILE' isn't set
-    profile = os.getenv("AWS_PROFILE", "default")
-
-    # Run scanner with corrected region
-    scanner = MasterScanner(region="eu-west-2", profile_name=profile)
+    # Run scanner (Demo Mode is checked internally)
+    scanner = MasterScanner(region="eu-west-2")
 
     results = scanner.scan(save_to_db=True)
 

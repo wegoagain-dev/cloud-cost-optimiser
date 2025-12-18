@@ -95,12 +95,12 @@ def run_scan_task(scan_run_id: int, region: str, save_to_db: bool):
     try:
         start_time = time.time()
 
-        # FIX: Use environment variable for profile
-        profile = os.getenv("AWS_PROFILE", "default")
-        scanner = MasterScanner(region=region, profile_name=profile)
+        # Initialize MasterScanner without profile argument.
+        # It handles Demo Mode and Auth automatically now.
+        scanner = MasterScanner(region=region)
 
-        # Run scan but DO NOT let MasterScanner save to DB. We will do it here
-        # so we can attach findings to our EXISTING scan_run_id.
+        # Run scan but DO NOT let MasterScanner save to DB internal method.
+        # We save it here to associate with the existing 'running' scan_run_id
         results = scanner.scan(save_to_db=False)
 
         duration = int(time.time() - start_time)
@@ -168,7 +168,7 @@ def run_scan_task(scan_run_id: int, region: str, save_to_db: bool):
                 )
                 db.add(finding)
 
-            # 3. Save EBS Volume Optimizations (Added)
+            # 3. Save EBS Volume Optimizations
             for opt in (
                 results["ebs_findings"]
                 .get("findings", {})
