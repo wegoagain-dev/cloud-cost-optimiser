@@ -151,19 +151,19 @@ aws configure --profile cost-optimiser
 
 Understanding AWS Cost Data, you'll need to understand how AWS stores data:
 
-**CloudWatch Metrics** - Performance data (CPU, memory, disk I/O)
-Stored in 1-minute or 5-minute intervals
-Retained for 15 months
+**CloudWatch Metrics** - Performance data (CPU, memory, disk I/O)\
+Stored in 1-minute or 5-minute intervals\
+Retained for 15 months\
 Example: CPUUtilization metric for EC2
 
-**Cost Explorer** - Billing data
-Daily granularity available
-Can filter by service, region, tag
+**Cost Explorer** - Billing data\
+Daily granularity available\
+Can filter by service, region, tag\
 Example: Total EC2 costs for November
 
-**Resource APIs** - Instance/volume metadata
-Current state (running, stopped)
-Instance type, size, age
+**Resource APIs** - Instance/volume metadata\
+Current state (running, stopped)\
+Instance type, size, age\
 Tags and names
 
 The scanner combines all three to find waste.
@@ -171,8 +171,6 @@ The scanner combines all three to find waste.
 ## Testing the EC2 Scanner
 
 ```bash
-# before running, this is for eu-west-2
-
 # You can use an ENV file to use as profile name or this
 export AWS_PROFILE=cost-optimiser
 # now run the scanner for ec2
@@ -206,11 +204,11 @@ Dev uses io2 (high performance SSD) for logs →
 Costs $0.125/GB vs st1 (throughput HDD) at $0.045/GB → 
 2.7x overpaying
 
-✅ **EBS Volume Lifecycle** - States, attachments, deletion policies
-✅ **Storage Cost Optimisation** - Type selection, size analysis
-✅ **I/O Pattern Analysis** - CloudWatch volume metrics
-✅ **Snapshot Management** - Retention policies, incremental backups
-✅ **Cost Calculation** - Storage pricing across different types
+✅ **EBS Volume Lifecycle** - States, attachments, deletion policies\
+✅ **Storage Cost Optimisation** - Type selection, size analysis\
+✅ **I/O Pattern Analysis** - CloudWatch volume metrics\
+✅ **Snapshot Management** - Retention policies, incremental backups\
+✅ **Cost Calculation** - Storage pricing across different types\
 ✅ **Data Analysis** - Grouping, bucketing, statistical analysis
 
 # Database Layer (PostgreSQL for YOUR application)
@@ -338,10 +336,10 @@ python -m backend.api.main
 
 **Expected output:**
 
-🚀 Starting Cloud Cost Optimiser API...
-✅ Database tables created successfully!
-✅ API ready to accept requests
-📚 API docs available at: http://localhost:8000/docs
+🚀 Starting Cloud Cost Optimiser API...\
+✅ Database tables created successfully!\
+✅ API ready to accept requests\
+📚 API docs available at: http://localhost:8000/docs\
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 
 # React Dashboard
@@ -379,4 +377,39 @@ npm run dev
 # Access Dashboard
 # Open your browser:
 http://localhost:3000
+```
+
+# Run using Docker Compose
+
+```bash
+### 1. Create Environment File
+cp .env.example .env
+nano .env  # Edit with your credentials
+```
+
+### 2. Build Images
+```bash
+docker-compose build
+```
+
+### 3. Start Services
+```bash
+docker-compose up -d
+```
+
+### 4. Initialize Database
+```bash
+docker-compose exec backend python -m backend.models.database
+```
+
+### 5. Verify Everything Works
+```bash
+# Check services are running
+docker-compose ps
+
+# Check backend health
+curl http://localhost:8000/health
+
+# Check frontend
+curl http://localhost:3000
 ```

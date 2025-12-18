@@ -9,7 +9,8 @@ import {
   Database,
   CheckCircle,
   Sparkles,
-  Zap
+  Zap,
+  Globe
 } from 'lucide-react';
 import { getDashboardStats, getLatestFindings, triggerScan, getScan } from '../services/api';
 
@@ -19,6 +20,21 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('eu-west-2');
+
+  const regions = [
+    { value: 'us-east-1', label: 'US East (N. Virginia)' },
+    { value: 'us-east-2', label: 'US East (Ohio)' },
+    { value: 'us-west-1', label: 'US West (N. California)' },
+    { value: 'us-west-2', label: 'US West (Oregon)' },
+    { value: 'eu-west-1', label: 'EU (Ireland)' },
+    { value: 'eu-west-2', label: 'EU (London)' },
+    { value: 'eu-west-3', label: 'EU (Paris)' },
+    { value: 'eu-central-1', label: 'EU (Frankfurt)' },
+    { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
+    { value: 'ap-southeast-2', label: 'Asia Pacific (Sydney)' },
+    { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' }
+  ];
 
   useEffect(() => {
     loadData();
@@ -43,10 +59,10 @@ const Dashboard = () => {
   const handleScan = async () => {
     try {
       setScanning(true);
-      setScanStatus('Starting scan...');
+      setScanStatus(`Starting scan in ${selectedRegion}...`);
 
-      const scan = await triggerScan('eu-west-2');
-      setScanStatus('Scanning...');
+      const scan = await triggerScan(selectedRegion);
+      setScanStatus(`Scanning ${selectedRegion}...`);
 
       // Poll for completion
       const pollInterval = setInterval(async () => {
@@ -125,14 +141,14 @@ const Dashboard = () => {
       {/* Header */}
       <header className="relative backdrop-blur-sm bg-white/5 border-b border-white/10 shadow-2xl">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center space-x-4">
               <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl shadow-lg">
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-200 via-blue-200 to-purple-200 bg-clip-text text-transparent">
-                  Cloud Cost Optimizer
+                  Cloud Cost Optimiser
                 </h1>
                 <p className="text-sm text-purple-300 mt-1 flex items-center space-x-2">
                   <Sparkles className="w-4 h-4" />
@@ -140,34 +156,57 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleScan}
-              disabled={scanning}
-              className={`
-                flex items-center space-x-2 px-6 py-3 rounded-xl font-medium
-                transition-all transform hover:scale-105 shadow-lg
-                ${scanning
-                  ? 'bg-gray-700 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-purple-500/50'
-                }
-              `}
-            >
-              {scanning ? (
-                <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  <span>Scanning...</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5" />
-                  <span>Run Scan</span>
-                </>
-              )}
-            </button>
+
+            <div className="flex items-center space-x-4 flex-wrap gap-4">
+              {/* Region Selector */}
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-300 pointer-events-none z-10" />
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  disabled={scanning}
+                  className="pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ minWidth: '200px' }}
+                >
+                  {regions.map(region => (
+                    <option key={region.value} value={region.value} className="bg-slate-800">
+                      {region.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Scan Button */}
+              <button
+                onClick={handleScan}
+                disabled={scanning}
+                className={`
+                  flex items-center space-x-2 px-6 py-3 rounded-xl font-medium
+                  transition-all transform hover:scale-105 shadow-lg
+                  ${scanning
+                    ? 'bg-gray-700 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-purple-500/50'
+                  }
+                `}
+              >
+                {scanning ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Scanning...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" />
+                    <span>Run Scan</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           {scanStatus && (
-            <div className="mt-4 px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-200 text-sm inline-block">
-              {scanStatus}
+            <div className="mt-4 px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-200 text-sm inline-flex items-center space-x-2">
+              {scanning && <Loader className="w-4 h-4 animate-spin" />}
+              <span>{scanStatus}</span>
             </div>
           )}
         </div>
@@ -239,8 +278,9 @@ const Dashboard = () => {
                 : 'Never'
               }
             </p>
-            <p className="text-xs text-purple-300">
-              Region: eu-west-2
+            <p className="text-xs text-purple-300 flex items-center space-x-1">
+              <Globe className="w-3 h-3" />
+              <span>Region: {selectedRegion}</span>
             </p>
           </div>
         </div>
@@ -257,7 +297,7 @@ const Dashboard = () => {
                 </h2>
               </div>
             </div>
-            <div className="p-6">
+            <div className="p-6 max-h-96 overflow-y-auto">
               {findings?.ec2_findings?.length > 0 ? (
                 <div className="space-y-3">
                   {findings.ec2_findings.slice(0, 5).map((finding) => (
@@ -300,7 +340,7 @@ const Dashboard = () => {
                 </h2>
               </div>
             </div>
-            <div className="p-6">
+            <div className="p-6 max-h-96 overflow-y-auto">
               {findings?.ebs_findings?.length > 0 ? (
                 <div className="space-y-3">
                   {findings.ebs_findings.slice(0, 5).map((finding) => (
@@ -343,7 +383,7 @@ const Dashboard = () => {
       <footer className="relative backdrop-blur-sm bg-white/5 border-t border-white/10 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <p className="text-center text-sm text-purple-300">
-            Cloud Cost Optimizer v1.0.0 | Powered by FastAPI & React ⚡
+            Cloud Cost Optimiser v1.0.0 | Powered by FastAPI & React ⚡
           </p>
         </div>
       </footer>

@@ -1,5 +1,16 @@
+# Existing entries
 cost*.json
 ec2*.json
 ebs*.json
-
 venv
+
+# Docker-specific
+.env
+.env.local
+.env.*.local
+
+# Docker volumes (don't commit data)
+postgres_data/
+
+# Docker Compose overrides
+docker-compose.override.yml

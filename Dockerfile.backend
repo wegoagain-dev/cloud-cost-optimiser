@@ -1,0 +1,62 @@
+# ============================================================================
+# BACKEND DOCKERFILE - FastAPI Application
+# ============================================================================
+# Learning: Multi-stage build for smaller final image
+
+# Stage 1: Build stage
+FROM python:3.11-slim AS builder
+
+# Learning: Set working directory - all commands run from here
+WORKDIR /app
+
+# Learning: Copy only requirements first (Docker layer caching)
+# If requirements don't change, Docker reuses this layer = faster builds
+COPY requirements.txt .
+
+# Learning: Install dependencies in a virtual environment
+# This keeps dependencies isolated and makes the image cleaner
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime stage (smaller final image)
+FROM python:3.11-slim
+
+# Learning: Install system dependencies for PostgreSQL
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Learning: Create non-root user for security
+# Never run containers as root in production!
+RUN useradd -m -u 1000 appuser
+
+WORKDIR /app
+
+# Learning: Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy application code
+COPY backend/ ./backend/
+COPY requirements.txt .
+
+# Learning: Set environment variables
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Learning: Change ownership to non-root user
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Learning: EXPOSE is documentation (doesn't actually publish the port)
+EXPOSE 8000
+
+# Learning: Use exec form for proper signal handling
+# This allows Ctrl+C to stop the container gracefully
+CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

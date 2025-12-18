@@ -1,0 +1,71 @@
+# ============================================================================
+# ROOT .dockerignore
+# ============================================================================
+# Learning: Like .gitignore, but for Docker builds
+# Excludes files from build context = faster builds, smaller images
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Docs
+README.md
+*.md
+docs/
+
+# Tests
+tests/
+*.test.js
+*.spec.js
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.*
+
+# Scan results (these are generated)
+*scan_results.json
+cost*.json
+ec2*.json
+ebs*.json

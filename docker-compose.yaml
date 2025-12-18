@@ -1,21 +1,117 @@
+# ============================================================================
+# DOCKER COMPOSE - Full Stack Configuration
+# ============================================================================
+# Learning: Docker Compose orchestrates multiple containers
+# One command to start: database, backend, frontend
+
 services:
-  # PostgreSQL Database
+  # ==========================================================================
+  # DATABASE - PostgreSQL
+  # ==========================================================================
   postgres:
     image: postgres:14-alpine
     container_name: cost_optimiser_db
+
+    # Learning: Environment variables configure PostgreSQL
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: cost_optimiser
+
+    # Learning: Ports mapping - host:container
+    # Access DB at localhost:5432 from your machine
     ports:
       - "5432:5432"
+
+    # Learning: Volumes persist data even when container stops
+    # Data stored in Docker volume, not lost on restart
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    # Learning: Health check ensures DB is ready before backend starts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
 
+    # Learning: Networks allow containers to talk to each other
+    networks:
+      - app-network
+
+  # ==========================================================================
+  # BACKEND - FastAPI
+  # ==========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+
+    container_name: cost_optimiser_backend
+
+    # Learning: Environment variables for the application
+    # environment:
+    # Database connection string
+    # DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cost_optimiser
+
+    # Learning: AWS credentials passed from host
+    # Use your actual AWS credentials here
+    # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    # AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-west-2}
+    # AWS_PROFILE: ${AWS_PROFILE:-default}
+    env_file:
+      - .env
+    # Learning: Mount AWS credentials from host machine
+    # This allows boto3 to use your local AWS config
+    volumes:
+      - ~/.aws:/home/appuser/.aws:ro # Read-only for security
+      - ./backend:/app/backend # Hot reload in development
+
+    ports:
+      - "8000:8000"
+
+    # Learning: depends_on with condition waits for DB to be healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - app-network
+
+    # Learning: Restart policy for production reliability
+    restart: unless-stopped
+
+  # ==========================================================================
+  # FRONTEND - React with Nginx
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      # Learning: Build arguments pass variables at build time
+      args:
+        VITE_API_URL: http://localhost:8000
+
+    container_name: cost_optimiser_frontend
+
+    ports:
+      - "3000:80" # Nginx serves on port 80, map to 3000 on host
+
+    depends_on:
+      - backend
+
+    networks:
+      - app-network
+
+    restart: unless-stopped
+
+# Learning: Named volumes are managed by Docker
 volumes:
   postgres_data:
+    driver: local
+
+# Learning: Custom network allows containers to communicate by name
+networks:
+  app-network:
+    driver: bridge

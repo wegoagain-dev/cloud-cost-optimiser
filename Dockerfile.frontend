@@ -1,0 +1,72 @@
+# ============================================================================
+# FRONTEND DOCKERFILE - React Application
+# ============================================================================
+# Learning: Multi-stage build - build in Node, serve with Nginx
+
+# Stage 1: Build React application
+FROM node:20-alpine AS builder
+
+# Learning: Alpine Linux = tiny base image (5MB vs 200MB)
+WORKDIR /app
+
+# Learning: Copy package files first for layer caching
+# npm install only runs if package.json changes
+COPY frontend/package*.json ./
+
+# Learning: Clean install (ci) is faster and more reliable than install
+RUN npm ci
+
+# Copy source code
+COPY frontend/ .
+
+# for import.meta.env.VITE_API_URL to work in Docker
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
+# Learning: Build production-optimized React bundle
+# Creates static HTML/CSS/JS files in /app/dist
+RUN npm run build
+
+# Stage 2: Production stage with Nginx
+FROM nginx:alpine
+
+# Learning: Copy custom Nginx config for React Router support
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Learning: This is crucial for React Router!
+    # All routes go to index.html, React handles routing
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Learning: Enable gzip compression for faster loading
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Learning: Cache static assets for better performance
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Learning: Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+}
+EOF
+
+# Learning: Copy built static files from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Learning: Nginx runs on port 80 by default
+EXPOSE 80
+
+# Learning: Nginx runs as daemon by default
+# "daemon off" keeps it in foreground for Docker
+CMD ["nginx", "-g", "daemon off;"]
