@@ -26,9 +26,8 @@ class MasterScanner:
     This class provides a simple interface to complex subsystems.
     """
 
-    def __init__(self, region: str = "eu-west-2", profile_name: str = None):
+    def __init__(self, region: str = "eu-west-2"):
         self.region = region
-        self.profile_name = profile_name
 
         # Check for Demo Mode (env var DEMO_MODE=true)
         self.is_demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"

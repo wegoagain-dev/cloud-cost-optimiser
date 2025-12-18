@@ -39,14 +39,16 @@ class EC2Scanner:
     Scans EC2 instances for cost optimization opportunities.
     """
 
-    def __init__(self, region: str = "eu-west-1", profile_name: str = None):
+    def __init__(self, region: str = "eu-west-2"):
         """
-        Initialize AWS clients.
+        Initialize AWS clients using credentials from environment variables.
 
-        Learning: boto3 Session allows using different AWS profiles.
-        Useful for scanning multiple AWS accounts.
+        Credentials are loaded from:
+        - AWS_ACCESS_KEY_ID
+        - AWS_SECRET_ACCESS_KEY
+        - AWS_DEFAULT_REGION (optional, falls back to region parameter)
         """
-        session = boto3.Session(profile_name=profile_name, region_name=region)
+        session = boto3.Session(region_name=region)
 
         self.ec2 = session.client("ec2")
         self.cloudwatch = session.client("cloudwatch")
@@ -499,11 +501,8 @@ if __name__ == "__main__":
     """
     import json
 
-    # Industry preferred: Use env vars or default profile to avoid 'ProfileNotFound'
-    profile = os.getenv("AWS_PROFILE", "default")
-
     # Initialize scanner
-    scanner = EC2Scanner(region="eu-west-2", profile_name=profile)
+    scanner = EC2Scanner(region="eu-west-2")
 
     # Run scan
     results = scanner.scan()

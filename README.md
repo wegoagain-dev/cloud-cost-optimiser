@@ -117,9 +117,11 @@ pip install -r requirements.txt
 # Install AWS CLI if you haven't
 # Mac: brew install awscli
 
-# Configure AWS credentials
-# create user on aws, then configure locally
-aws configure --profile cost-optimiser
+# AWS credentials are loaded from environment variables:
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY  
+# - AWS_DEFAULT_REGION
+# These are set in your .env file
 
 # Create IAM Policy for Read-Only Access:
 
@@ -171,8 +173,6 @@ The scanner combines all three to find waste.
 ## Testing the EC2 Scanner
 
 ```bash
-# You can use an ENV file to use as profile name or this
-export AWS_PROFILE=cost-optimiser
 # now run the scanner for ec2
 python -m backend.scanner.ec2_scanner
 ```
