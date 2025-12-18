@@ -1,3 +1,8 @@
+# Guide to Cloud Cost Optimisation Project
+
+## Clone this Project  
+https://github.com/wegoagain-dev/cloud-cost-optimiser
+
 # What Problem Are We Solving?
 **Real scenario:** A startup runs 50 EC2 instances. Their AWS bill is $8,000/month.
 
@@ -69,7 +74,7 @@ cloud-cost-optimiser/
 │   │   ├── __init__.py
 │   │   ├── ec2_scanner.py
 │   │   ├── ebs_scanner.py
-│   │   └── rds_scanner.py
+│   │   └── master_scanner.py
 │   ├── api/              # FastAPI endpoints
 │   │   ├── __init__.py
 │   │   ├── main.py
@@ -89,8 +94,9 @@ cloud-cost-optimiser/
 │   └── package.json
 ├── infrastructure/       # Terraform configs
 │   └── terraform/
-├── docker-compose.yml    # Local development
-├── Dockerfile
+├── docker-compose.yaml    # Local development
+├── Dockerfile.backend
+├── Dockerfile.frontend
 ├── requirements.txt      # Python dependencies
 └── README.md
 ```
@@ -117,13 +123,7 @@ pip install -r requirements.txt
 # Install AWS CLI if you haven't
 # Mac: brew install awscli
 
-# AWS credentials are loaded from environment variables:
-# - AWS_ACCESS_KEY_ID
-# - AWS_SECRET_ACCESS_KEY  
-# - AWS_DEFAULT_REGION
-# These are set in your .env file
-
-# Create IAM Policy for Read-Only Access:
+# Create IAM Policy for Read-Only Access and attach to a user in AWS IAM:
 
 {
   "Version": "2012-10-17",
@@ -173,7 +173,7 @@ The scanner combines all three to find waste.
 ## Testing the EC2 Scanner
 
 ```bash
-# now run the scanner for ec2
+# now run the scanner for ec2 (reminder its for eu-west-2)
 python -m backend.scanner.ec2_scanner
 ```
 
@@ -183,7 +183,7 @@ python -m backend.scanner.ec2_scanner
 ✅ Decision Algorithms - Severity classification\
 ✅ Clean Code - Docstrings, type hints, error handling
 
-# Testing the EBS (Elastic Block Store) scanner
+## Testing the EBS (Elastic Block Store) scanner
 ```bash
 python -m backend.scanner.ebs_scanner
 ```
@@ -351,25 +351,17 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ✅ Real-world Patterns - Loading states, error handling
 
 
-# Run Everything Locally
+# Run Everything Locally (demo mode)
 ```bash
 # Terminal 1 - Start Database
 docker-compose up -d postgres
 
 # Terminal 2 - Start API
-cd backend
 python -m backend.api.main
 
 # Terminal 3 - Start Frontend
 cd frontend
 npm install
-
-# Install additional libraries
-npm install axios recharts lucide-react clsx tailwind-merge
-
-# Install Tailwind CSS
-npm install -D tailwindcss@3.4.17 postcss autoprefixer
-npx tailwindcss init -p
 
 # Run React Dashboard
 npm run dev
@@ -379,31 +371,27 @@ npm run dev
 http://localhost:3000
 ```
 
-# Run using Docker Compose
+# Run using Docker Compose (real mode)
 
 ```bash
+# AWS credentials are loaded from environment variables:
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY  
+# These are set in your .env file
 ### 1. Create Environment File
 cp .env.example .env
 nano .env  # Edit with your credentials
-```
 
 ### 2. Build Images
-```bash
 docker-compose build
-```
 
 ### 3. Start Services
-```bash
 docker-compose up -d
-```
 
-### 4. Initialize Database
-```bash
+### 4. Initialize Database (optional)
 docker-compose exec backend python -m backend.models.database
-```
 
 ### 5. Verify Everything Works
-```bash
 # Check services are running
 docker-compose ps
 

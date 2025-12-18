@@ -1,6 +1,5 @@
 # backend/api/routes/scans.py
 
-import os
 import time
 from datetime import datetime
 from typing import List
@@ -95,8 +94,6 @@ def run_scan_task(scan_run_id: int, region: str, save_to_db: bool):
     try:
         start_time = time.time()
 
-        # Initialize MasterScanner without profile argument.
-        # It handles Demo Mode and Auth automatically now.
         scanner = MasterScanner(region=region)
 
         # Run scan but DO NOT let MasterScanner save to DB internal method.

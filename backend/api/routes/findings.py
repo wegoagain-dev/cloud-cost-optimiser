@@ -1,8 +1,15 @@
 # backend/api/routes/findings.py
-from typing import Any, Dict  # ← Add this
+from datetime import datetime
+from typing import Any, Dict
 
 from backend.api import schemas
-from backend.models.database import EBSFinding, EC2Finding, ScanRun, get_db
+from backend.models.database import (
+    EBSFinding,
+    EC2Finding,
+    SavingsRealized,
+    ScanRun,
+    get_db,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -99,8 +106,6 @@ async def mark_as_implemented(
         "implemented_by": "admin@company.com"
     }
     """
-    from backend.models.database import SavingsRealized
-
     # Find the finding
     if finding_type == "ec2":
         finding = db.query(EC2Finding).filter(EC2Finding.id == finding_id).first()

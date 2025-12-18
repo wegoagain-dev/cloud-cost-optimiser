@@ -5,7 +5,6 @@ Identifies unused EBS volumes and expensive snapshots.
 Region: eu-west-2 (London)
 """
 
-import os
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta

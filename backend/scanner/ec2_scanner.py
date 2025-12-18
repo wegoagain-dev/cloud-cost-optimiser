@@ -9,7 +9,6 @@ Learning Objectives:
 4. Business rule implementation
 """
 
-import os
 import statistics
 from dataclasses import dataclass
 from datetime import datetime, timedelta

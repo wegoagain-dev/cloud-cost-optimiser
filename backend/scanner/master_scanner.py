@@ -34,8 +34,8 @@ class MasterScanner:
 
         # Only initialize real scanners if NOT in demo mode
         if not self.is_demo_mode:
-            self.ec2_scanner = EC2Scanner(region, profile_name)
-            self.ebs_scanner = EBSScanner(region, profile_name)
+            self.ec2_scanner = EC2Scanner(region)
+            self.ebs_scanner = EBSScanner(region)
 
     def scan(self, save_to_db: bool = True) -> Dict:
         """Run all scanners (or generate demo data) and generate comprehensive report"""

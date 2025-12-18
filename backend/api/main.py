@@ -12,10 +12,8 @@ Learning: FastAPI Features
 5. Type hints everywhere (better IDE support)
 """
 
-import os
 from contextlib import asynccontextmanager  # Required for lifespan
 from datetime import datetime
-from typing import List
 
 from backend.api import schemas
 from backend.models.database import get_db, init_db
@@ -73,7 +71,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite dev server
     ],
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
@@ -92,7 +89,6 @@ async def root():
         "status": "healthy",
         "service": "Cloud Cost Optimiser API",
         "version": "1.0.0",
-        "region": "eu-west-2",
     }
 
 

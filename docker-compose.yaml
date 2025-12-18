@@ -49,17 +49,6 @@ services:
 
     container_name: cost_optimiser_backend
 
-    # Learning: Environment variables for the application
-    # environment:
-    # Database connection string
-    # DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cost_optimiser
-
-    # Learning: AWS credentials passed from host
-    # Use your actual AWS credentials here
-    # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-    # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-    # AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-west-2}
-    # AWS_PROFILE: ${AWS_PROFILE:-default}
     env_file:
       - .env
     # Learning: Mount AWS credentials from host machine
