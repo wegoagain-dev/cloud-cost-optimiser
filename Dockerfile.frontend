@@ -20,7 +20,7 @@ RUN npm ci
 COPY frontend/ .
 
 # for import.meta.env.VITE_API_URL to work in Docker
-ARG VITE_API_URL
+ARG VITE_API_URL="/"
 ENV VITE_API_URL=$VITE_API_URL
 
 # Learning: Build production-optimized React bundle

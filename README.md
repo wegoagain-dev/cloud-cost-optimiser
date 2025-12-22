@@ -1,9 +1,9 @@
-# Guide to Cloud Cost Optimisation Project
+## Guide to Cloud Cost Optimisation Project
 
 ## Clone this Project  
-https://github.com/wegoagain-dev/cloud-cost-optimiser
+`git clone https://github.com/wegoagain-dev/cloud-cost-optimiser.git`
 
-# What Problem Are We Solving?
+## What Problem Are We Solving?
 **Real scenario:** A startup runs 50 EC2 instances. Their AWS bill is $8,000/month.
 
 **After analysis:**\
@@ -16,7 +16,7 @@ Total waste: $4,100/month = $49,200/year\
 This tool finds this automatically.
 
 
-# Architecture
+## Architecture
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        USER INTERFACE                           │
@@ -53,7 +53,7 @@ This tool finds this automatically.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-# 🛠️ Tech Stack & Architecture Decisions
+## 🛠️ Tech Stack & Architecture Decisions
 
 | Technology | Why This Choice? | Key Learning Outcomes |
 | :--- | :--- | :--- |
@@ -65,7 +65,7 @@ This tool finds this automatically.
 | **🏗️ Terraform** | The "Gold Standard" for Infrastructure as Code (IaC) to manage cloud resources. | IaC best practices, state management, and declarative infra. |
 
 
-# Project Structure
+## Project Structure
 
 ```
 cloud-cost-optimiser/
@@ -103,7 +103,7 @@ cloud-cost-optimiser/
 
 **Learning Point:** Practicing, Good project structure.
 
-# Setting up Python environment
+## Setting up Python environment
 ```bash
 # Create virtual environment (isolates project dependencies)
 # ensure `brew install python@3.11` as its more stable
@@ -117,7 +117,7 @@ pip install -r requirements.txt
 ```
 **Learning Point:** requirements.txt ensures everyone has the same dependencies. Critical for team projects.
 
-# Setting up AWS Credentials
+## Setting up AWS Credentials
 
 ```bash
 # Install AWS CLI if you haven't
@@ -149,7 +149,7 @@ pip install -r requirements.txt
 ```
 **Why read-only?** Your scanner should NEVER modify resources automatically. Only recommend changes.
 
-# Building Core Scanner
+## Building Core Scanner
 
 Understanding AWS Cost Data, you'll need to understand how AWS stores data:
 
@@ -211,7 +211,7 @@ Costs $0.125/GB vs st1 (throughput HDD) at $0.045/GB →
 ✅ **Cost Calculation** - Storage pricing across different types\
 ✅ **Data Analysis** - Grouping, bucketing, statistical analysis
 
-# Database Layer (PostgreSQL for YOUR application)
+## Database Layer (PostgreSQL for YOUR application)
 
 **What it does:** Stores YOUR scan results\
 **Purpose:** Track history, show trends, power the dashboard
@@ -248,7 +248,7 @@ public | scan_runs        | table | postgres
 
 Now to save scan results to the database
 
-# Run scan and save to database
+## Run scan and save to database
 ```bash
 python -m backend.scanner.master_scanner
 ```
@@ -276,7 +276,7 @@ whats been accomplished:
 ✅ Data persistence - Scan results stored permanently\
 ✅ Tracking capability - Can now show trends over time
 
-# REST API - Deep Dive with FastAPI
+## REST API - Deep Dive with FastAPI
 Lets learn: (to expose to the world)
 
 ✅ RESTful API Design - Industry standard patterns\
@@ -339,10 +339,10 @@ python -m backend.api.main
 🚀 Starting Cloud Cost Optimiser API...\
 ✅ Database tables created successfully!\
 ✅ API ready to accept requests\
-📚 API docs available at: http://localhost:8000/docs\
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+📚 API docs available at: http://localhost:8000/docs\ \
+INFO:Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 
-# React Dashboard
+## React Dashboard
 
 ✅ React Fundamentals - Components, hooks, state management\
 ✅ API Integration - Fetch data from FastAPI backend\
@@ -351,7 +351,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ✅ Real-world Patterns - Loading states, error handling
 
 
-# Run Everything Locally (demo mode)
+## Run Everything Locally (demo mode)
 ```bash
 # Terminal 1 - Start Database
 docker-compose up -d postgres
@@ -371,7 +371,7 @@ npm run dev
 http://localhost:3000
 ```
 
-# Run using Docker Compose (real mode)
+## Run using Docker Compose (real mode)
 
 ```bash
 # AWS credentials are loaded from environment variables:

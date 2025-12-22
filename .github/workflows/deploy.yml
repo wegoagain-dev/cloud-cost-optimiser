@@ -1,0 +1,64 @@
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches:
+      - main # Runs every time you push to main
+
+env:
+  AWS_REGION: eu-west-2
+  CLUSTER_NAME: cco-cluster
+  BACKEND_SERVICE: cco-backend-service
+  FRONTEND_SERVICE: cco-frontend-service
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Get the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Log in to AWS
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # 3. Build & Push Backend
+      - name: Build & Push Backend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_BACKEND_URI }}
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile.backend .
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+
+      # 4. Build & Push Frontend
+      - name: Build & Push Frontend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_FRONTEND_URI }}
+          IMAGE_TAG: latest
+        run: |
+          # Note: VITE_API_URL defaults to "/" in Dockerfile, so no extra args needed!
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile.frontend .
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+
+      # 5. Tell ECS to Restart (Deployment)
+      - name: Update ECS Backend Service
+        run: |
+          aws ecs update-service --cluster $CLUSTER_NAME --service $BACKEND_SERVICE --force-new-deployment
+
+      - name: Update ECS Frontend Service
+        run: |
+          aws ecs update-service --cluster $CLUSTER_NAME --service $FRONTEND_SERVICE --force-new-deployment
