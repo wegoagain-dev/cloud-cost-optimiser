@@ -51,10 +51,8 @@ services:
 
     env_file:
       - .env
-    # Learning: Mount AWS credentials from host machine
-    # This allows boto3 to use your local AWS config
+
     volumes:
-      - ~/.aws:/home/appuser/.aws:ro # Read-only for security
       - ./backend:/app/backend # Hot reload in development
 
     ports:

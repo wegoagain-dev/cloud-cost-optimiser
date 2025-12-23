@@ -50,7 +50,6 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_FRONTEND_URI }}
           IMAGE_TAG: latest
         run: |
-          # Note: VITE_API_URL defaults to "/" in Dockerfile, so no extra args needed!
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile.frontend .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 

@@ -61,7 +61,7 @@ resource "aws_ecs_task_definition" "backend" {
         }
       }
       environment = [
-        # We will add DB credentials here in the next step!
+        # We will add DB credentials here
         { name = "DEMO_MODE", value = "false" },
         # The Connection String
         {
