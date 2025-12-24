@@ -1,212 +1,114 @@
-# Cloud Cost Optimiser (AWS, Terraform, ECS Fargate)
+# Cloud Cost Optimiser
 
 ## Overview
+This project demonstrates the transformation of a local Python/React application into a fully **production-ready cloud architecture** on AWS. It solves a critical financial problem, untracked cloud spend, by identifying idle EC2 instances, oversized databases, and orphaned storage volumes.
 
-This project transforms a local Python/React application into a production grade, cloud native architecture on AWS. 
+Beyond the utility itself, this project serves as a comprehensive example of the **DevOps lifecycle**, featuring Infrastructure as Code (Terraform), Serverless Compute (ECS Fargate), and a robust CI/CD pipeline (GitHub Actions).
 
-It solves a real world financial problem wasted cloud spend, while demonstrating a comprehensive DevOps lifecycle: from Infrastructure as Code (Terraform) to CI/CD automation (GitHub Actions) and Serverless Compute (Fargate).
+## The Problem
+In many AWS environments, costs spiral out of control due to forgotten resources.
+*   **Idle Compute:** Dev servers left running 24/7.
+*   **Oversized Instances:** Using `t3.large` when `t3.micro` would suffice.
+*   **Orphaned Storage:** EBS volumes left behind after instances are terminated.
+*   **Stale Backups:** Snapshots retained for years unnecessarily.
 
-The application scans an AWS account for idle resources (EC2, EBS, RDS) and generates actionable cost-saving recommendations on a dashboard.
+This tool automates the discovery of this waste, calculating potential savings and presenting them on a dashboard.
 
-## What Problem Are We Solving?
-**Real scenario:** A startup runs 50 EC2 instances. Their AWS bill is $8,000/month.
+## Architecture & Cloud Transformation
+I moved the application from a monolithic local setup to a decoupled 3-tier production architecture.
 
-**After analysis:**\
-15 instances idle at night (could be stopped): $2,400/month wasted\
-8 instances oversized (t3.large when t3.small works): $1,200/month wasted\
-20 unattached EBS volumes from deleted instances: $200/month wasted\
-100+ old snapshots from 2 years ago: $300/month wasted
-
-Total waste: $4,100/month = $49,200/year\
-This tool finds this automatically.
-
-
-## Architecture
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        USER INTERFACE                           │
-│  React Dashboard - Shows costs, recommendations, savings        │
+│  React Dashboard (Nginx) - Shows costs & recommendations        │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS/REST
+                             │ HTTPS/REST (via ALB)
 ┌────────────────────────────▼────────────────────────────────────┐
 │                         API LAYER                               │
-│  FastAPI - Handles requests, authentication, business logic     │
+│  FastAPI (ECS Fargate) - Business logic & AWS Scanning          │
 └────────────────────────────┬────────────────────────────────────┘
                              │
           ┌──────────────────┼──────────────────┐
           │                  │                  │
 ┌─────────▼─────────┐ ┌─────▼──────┐ ┌────────▼────────┐
 │   EC2 Scanner     │ │ EBS Scanner│ │  RDS Scanner    │
-│ (CPU, Memory)     │ │ (Volumes)  │ │  (Databases)    │
+│ (CloudWatch)      │ │ (Volumes)  │ │  (Databases)    │
 └─────────┬─────────┘ └─────┬──────┘ └────────┬────────┘
-          │                  │                  │
-          └──────────────────┼──────────────────┘
-                             │
+                            │
 ┌────────────────────────────▼────────────────────────────────────┐
-│                       AWS APIs                                  │
-│  • Cost Explorer API (billing data)                             │
-│  • CloudWatch API (metrics: CPU, memory, network)               │
-│  • EC2 API (instance details)                                   │
-│  • EBS API (volume details)                                     │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                    DATABASE (PostgreSQL)                        │
-│  • Scan history                                                 │
-│  • Recommendations                                              │
-│  • Savings tracking                                             │
+│                    DATABASE (RDS PostgreSQL)                    │
+│  • Scan history & Recommendations (Private Subnet)              │
 └─────────────────────────────────────────────────────────────────┘
 ```
-## Key Features
-- Serverless Compute: Runs on AWS ECS Fargate, eliminating the need to manage EC2 servers.
 
-- Infrastructure as Code: 100% of the infrastructure (VPC, Subnets, ALB, RDS, ECR) is provisioned via Terraform.
+### Key Technical Decisions
 
-- Zero Downtime Deployments: Automated CI/CD Pipeline using GitHub Actions to build multi-arch Docker images and update ECS services without interruption.
+#### 1. Compute: ECS Fargate (Serverless)
+I migrated the compute layer to **AWS Fargate** to remove the operational overhead of managing EC2 instances. Containers are deployed across multiple Availability Zones (AZs) for high availability.
+*   **Why:** No OS patching, automatic scaling, and pay-per-use pricing.
 
-- Production Security: Implements Least Privilege IAM Roles (no hardcoded keys) and strict Security Groups (firewalls).
+#### 2. Networking: Application Load Balancer
+An ALB sits at the edge, handling all incoming traffic on Port 80. It performs path-based routing:
+*   `/api/*` → Routes to the **Backend** container (FastAPI).
+*   `/*` → Routes to the **Frontend** container (Nginx/React).
+*   **Benefit:** Decouples the frontend and backend while exposing a single unified endpoint to the user.
 
-- Cost Efficient: Designed to run within the AWS Free Tier (where possible) using t3.micro instances and Spot Fargate pricing concepts.
+#### 3. Storage: Private RDS
+The PostgreSQL database runs in a **Private Subnet**, completely isolated from the public internet. It allows traffic *only* from the Backend container via strict Security Group rules.
 
-## 🛠️ Tech Stack & Architecture Decisions
+#### 4. Infrastructure as Code (Terraform)
+The entire environment (VPC, Subnets, ALB, ECS, RDS) is provisioned via Terraform (`/terraform` folder). This ensures the infrastructure is reproducible, versioned, and can be destroyed/recreated in minutes.
 
-| Technology | Why This Choice? | Key Learning Outcomes |
-| :--- | :--- | :--- |
-| **🐍 Python** | Native AWS SDK (`boto3`) support and dominant in cloud automation. | Scripting real-world cloud automation and data processing. |
-| **⚡ FastAPI** | Modern, high performance framework with built-in async support and auto-documentation. | RESTful API design, asynchronous programming, and Swagger UI. |
-| **🐘 PostgreSQL** | Robust relational database perfect for structured findings and historical cost data. | Schema normalization, SQL optimization, and data persistence. |
-| **⚛️ React** | Industry standard library for building interactive, component-based dashboards. | Modern frontend development, state management, and API integration. |
-| **🐳 Docker** | Ensures consistency across environments (dev vs. prod) and simplifies deployment. | Containerization fundamentals and writing efficient Dockerfiles. |
-| **🏗️ Terraform** | The "Gold Standard" for Infrastructure as Code (IaC) to manage cloud resources. | IaC best practices, state management, and declarative infra. |
+## Security Strategy ("Zero Keys")
+I followed a strict security posture to prevent credential leakage.
 
-## Security Strategy (The "No Keys" Policy)
-You will notice no AWS keys are present in the production configuration.
-
-- In Production (ECS): The application uses IAM Task Roles. The container automatically retrieves temporary, rotating credentials from the AWS metadata service.
-
-- In Development (Local): The app falls back to the boto3 credential chain, using `.env` file, keeping secrets strictly out of the repository.
-
-- Database Security: The RDS instance is set to `publicly_accessible = false` and is protected by a Security Group that only allows traffic from the Backend ECS Task.
+*   **IAM Task Roles:** The application uses IAM roles attached to the ECS Task to interact with AWS services (Cost Explorer, EC2 Read-Only). No long-lived access keys are ever stored in the container or code.
+*   **Secrets Management:** Database credentials are auto-generated by Terraform and stored in **AWS Secrets Manager**. They are injected into the containers only at runtime as environment variables.
+*   **Local Development:** Locally, the app falls back to the standard `boto3` credential chain (reading from your `.env` file in Docker or `~/.aws/credentials` on your host), ensuring that dev secrets stay on the developer's machine.
 
 ## CI/CD Pipeline
-Every push to main triggers the automated workflow:
+I implemented a robust automation pipeline using **GitHub Actions**.
 
-1. Checkout & Login: Authenticates with AWS and Amazon ECR.
+1.  **Build:** Creates multi-arch Docker images (AMD64) for frontend and backend.
+    *   *Frontend Optimization:* Uses a multi-stage build to compile the React app and serve it via Nginx, keeping the image lightweight.
+2.  **Push:** Uploads versioned images to Amazon ECR.
+3.  **Deploy:** Forces a rolling update on the ECS Cluster. This replaces old tasks with new ones only after health checks pass, ensuring **zero downtime**.
 
-2. Build Multi-Arch: Builds Docker images compatible with Fargate (AMD64) even if triggered from an ARM Mac.
+## How to Run
 
-3. Push: Uploads images to the private ECR registry.
+### Option 1: Local Development
+For a detailed guide on running the app locally with Docker Compose (including Python env setup), see [README-local.md](./README-local.md).
 
-4. Deploy: Forces a rolling update on the ECS Cluster, replacing old containers with new ones.
-
-
-## Running this locally (Docker Compose)
-### Clone this Project  
 ```bash
 git clone https://github.com/wegoagain-dev/cloud-cost-optimiser.git
-```
-### Ensure your AWS account has the following policies
-
-```bash
-# Install AWS CLI if you haven't
-# Create IAM Policy for Read-Only Access and attach to a user in AWS IAM:
-
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ec2:Describe*",
-        "cloudwatch:GetMetricStatistics",
-        "cloudwatch:ListMetrics",
-        "ce:GetCostAndUsage",
-        "ce:GetCostForecast",
-        "rds:Describe*",
-        "s3:ListAllMyBuckets",
-        "s3:GetBucketLocation",
-        "s3:GetBucketTagging"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-
-```
-**Why read-only?** Your scanner should NEVER modify resources automatically. Only recommend changes.
-
-### Modify the .env file
-
-```bash
-# AWS credentials are loaded from environment variables:
-# - AWS_ACCESS_KEY_ID
-# - AWS_SECRET_ACCESS_KEY  
-### 1. Create Environment File
-cp .env.example .env
-nano .env  # Edit with your credentials
+cp .env.example .env # Add your AWS Read-Only credentials
+docker-compose up --build
 ```
 
-### Run the Docker Compose
-```bash
-### 2. Build Images
-docker-compose build
+### Option 2: Production Deployment (Terraform)
+To deploy the full stack to your own AWS account:
 
-### 3. Start Services
-docker-compose up -d
+1.  **Provision Infrastructure:**
+    ```bash
+    cd terraform
+    terraform init
+    terraform apply -var="my_ip=$(curl -s ifconfig.me)/32"
+    ```
 
-### 4. Initialize Database (optional)
-docker-compose exec backend python -m backend.models.database
+2.  **Configure GitHub Secrets:**
+    Add the following to your repository secrets to enable the CI/CD pipeline:
+    *   `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY` (For an IAM user with permissions to push to ECR/ECS).
+    *   `AWS_REGION` (e.g., `eu-west-2`).
+    *   `ECR_BACKEND_URI` & `ECR_FRONTEND_URI` (Output from Terraform).
 
-### 5. Verify Everything Works
-# Check services are running
-docker-compose ps
-```
+3.  **Deploy:**
+    Simply push to main: `git push origin main`.
 
-**Check frontend** \
-http://localhost:3000
-
-**Check backend health** \
-http://localhost:8000/health
-
-**Check backend docs** \
-http://localhost:8000/docs
-
-## Running this using Terraform
-
-Prerequisites: AWS CLI installed, Terraform installed.
-
-### 1. Provision Infrastructure
-
-```Bash
-cd terraform
-# Initialize and Apply
-terraform init
-terraform apply -var="my_ip=$(curl -s ifconfig.me)/32" 
-# if issue replace $(curl -s ifconfig.me) with your public ip
-```
-### 2. Setup GitHub Secrets, Go to your Repo Settings -> Secrets and add:
-
-- AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY (For the "Builder" user)
-
-- AWS_REGION (e.g., eu-west-2)
-
-- ECR_BACKEND_URI & ECR_FRONTEND_URI (Get these from AWS Console -> ECR)
-
-### 3. Trigger Deployment, Simply push to main.
-
-```Bash
-git add .
-git commit -m "feat: Initial deploy"
-git push origin main
-# Wait ~5 minutes for GitHub Actions to build and ECS to deploy.
-```
-
-## Teardown
-To avoid costs, destroy the infrastructure when done.
-
-```Bash
-cd terraform
-terraform destroy -var="my_ip=0.0.0.0/0"
-```
-## Errors encountered
 ---
+
+**Teardown:**
+To avoid unexpected costs, always destroy the infrastructure when finished:
+```bash
+cd terraform
+terraform destroy
+```
